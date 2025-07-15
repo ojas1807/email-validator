@@ -1,0 +1,6 @@
+Flask
+pandas
+dnspython
+PyPDF2
+openpyxl
+xlrd
