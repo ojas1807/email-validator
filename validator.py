@@ -36,24 +36,35 @@ def mx_and_smtp_check(email):
         domain_cache[domain] = False
         return False
 
-# ✅ Main function
-def validate_emails(file_path):
-    emails = extract_emails_from_file(file_path)
-    emails = list(set(emails))  # deduplicate
+# ✅ Main function with chunked processing
+def validate_emails(file_path, chunk_size=5000):
+    all_results = []
+    seen_emails = set()
 
-    df = pd.DataFrame({'email': emails})
-    df['Format_Valid'] = df['email'].apply(is_valid_format)
+    for chunk_emails in pd.read_csv(file_path, chunksize=chunk_size):
+        if 'email' not in chunk_emails.columns.str.lower().tolist():
+            continue
 
-    emails_to_check = df[df['Format_Valid']]['email'].tolist()
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        smtp_results = list(executor.map(mx_and_smtp_check, emails_to_check))
+        email_col = [col for col in chunk_emails.columns if 'email' in col.lower()][0]
+        chunk_emails = chunk_emails.dropna(subset=[email_col])
+        chunk_emails['email'] = chunk_emails[email_col].str.strip().str.lower()
+        chunk_emails = chunk_emails[['email']].drop_duplicates()
 
-    df.loc[df['Format_Valid'], 'SMTP_Valid'] = smtp_results
+        chunk_emails = chunk_emails[~chunk_emails['email'].isin(seen_emails)]
+        seen_emails.update(chunk_emails['email'].tolist())
 
-    df['Final_Status'] = df.apply(
-        lambda row: 'Valid' if row['Format_Valid'] and row['SMTP_Valid'] else 'Invalid',
-        axis=1
-    )
+        chunk_emails['Format_Valid'] = chunk_emails['email'].apply(is_valid_format)
 
-    df[df['Final_Status'] == 'Valid'].to_csv('valid_emails.csv', index=False)
-    df[df['Final_Status'] == 'Invalid'].to_csv('invalid_emails.csv', index=False)
+        valid_emails = chunk_emails[chunk_emails['Format_Valid']]['email'].tolist()
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            smtp_results = list(executor.map(mx_and_smtp_check, valid_emails))
+
+        chunk_emails.loc[chunk_emails['Format_Valid'], 'SMTP_Valid'] = smtp_results
+        chunk_emails['Final_Status'] = chunk_emails.apply(
+            lambda row: 'Valid' if row['Format_Valid'] and row.get('SMTP_Valid', False) else 'Invalid', axis=1)
+
+        all_results.append(chunk_emails)
+
+    final_df = pd.concat(all_results, ignore_index=True)
+    final_df[final_df['Final_Status'] == 'Valid'].to_csv('valid_emails.csv', index=False)
+    final_df[final_df['Final_Status'] == 'Invalid'].to_csv('invalid_emails.csv', index=False)
