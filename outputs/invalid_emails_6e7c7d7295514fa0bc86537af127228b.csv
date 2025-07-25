@@ -1,0 +1,6 @@
+email,Format_Valid,SMTP_Valid,Final_Status
+john.doe@gmail.com,True,False,Invalid
+test.user@outlook.com,True,False,Invalid
+student123@outlook.com,True,False,Invalid
+test.email+alias@gmail.com,True,False,Invalid
+user123@gmail.com,True,False,Invalid
