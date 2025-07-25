@@ -36,7 +36,8 @@ def upload_file():
         file.save(file_path)
 
         session_id = uuid.uuid4().hex
-        valid_path, invalid_path, total, valid_count, invalid_count = validate_emails(file_path, session_id, output_folder=app.config['OUTPUT_FOLDER'])
+        valid_path, invalid_path, total, valid_count, invalid_count = validate_emails(
+            file_path, session_id, output_folder=app.config['OUTPUT_FOLDER'])
 
         return render_template('result.html',
                                valid_file=os.path.basename(valid_path),
