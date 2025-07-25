@@ -1,0 +1,3 @@
+email,Format_Valid,SMTP_Valid,Final_Status
+ojaspatrikar@outlook.com,True,False,Invalid
+binks@outlook.com,True,False,Invalid
