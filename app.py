@@ -32,12 +32,17 @@ def upload_file():
         if not filename:
             return "Invalid file name", 400
 
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        session_id = uuid.uuid4().hex
+        # Use unique filename in upload folder too
+        upload_filename = f"{session_id}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], upload_filename)
         file.save(file_path)
 
-        session_id = uuid.uuid4().hex
-        valid_path, invalid_path, total, valid_count, invalid_count = validate_emails(
-            file_path, session_id, output_folder=app.config['OUTPUT_FOLDER'])
+        try:
+            valid_path, invalid_path, total, valid_count, invalid_count = validate_emails(
+                file_path, session_id, output_folder=app.config['OUTPUT_FOLDER'])
+        except ValueError as e:
+            return f"Error processing file: {str(e)}", 400
 
         return render_template('result.html',
                                valid_file=os.path.basename(valid_path),
